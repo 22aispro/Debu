@@ -118,9 +118,3 @@ Debu/ -- public API
 ├─ StackTrace    -- traceback filtering
 └─ Performance   -- frame delta monitoring
 ```
-
----
-
-## License
-
-Free to use. Attribution appreciated.
