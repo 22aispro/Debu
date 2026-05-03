@@ -110,7 +110,6 @@ Performance.SetThreshold(0.05) -- 50ms
 
 ```
 Debu/
-├─ init          -- public API
 ├─ Logger        -- output formatting and routing
 ├─ ErrorParser   -- raw error string → structured output
 ├─ StackTrace    -- traceback filtering
