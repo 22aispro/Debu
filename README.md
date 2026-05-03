@@ -1,101 +1,70 @@
 # Debu
 
-A lightweight error formatter for Roblox. Drop it in, call `Init`, get readable errors instead of cryptic Lua spam.
+Lightweight error formatter and runtime diagnostics module for Roblox.
 
-Built for devs who are tired of squinting at `attempt to index nil with 'X'` for the 400th time.
-
----
-
-## Why
-
-**Before Debu:**
-```
-ServerScriptService.Script:3: attempt to perform arithmetic (mul) on nil and number
-```
-
-**After Debu:**
-```
-── Debu ── ServerScriptService.Script:3 → Tried to do math on a nil value
-```
-
-Same info. Way less brain damage.
+Debu intercepts uncaught errors via `ScriptContext.Error`, parses them into a structured format, and reports them through a unified logger. It also includes frame-delta monitoring for detecting lag spikes.
 
 ---
 
-## Install
+## Features
 
-1. Grab the `Debu` folder.
-2. Drop it into `ReplicatedStorage`.
-3. In a server `Script` (e.g. inside `ServerScriptService`):
+- Automatic interception and formatting of uncaught runtime errors
+- Pattern-based translation of common Lua error messages into readable explanations
+- Tagged logging for system-level context
+- Heartbeat-based lag spike detection with configurable threshold
+- No external dependencies
+
+---
+
+## Installation
+
+1. Place the `Debu` folder inside `ReplicatedStorage`.
+2. In a server `Script`, require and initialize:
 
 ```lua
 local Debu = require(game.ReplicatedStorage.Debu)
 Debu.Init()
 ```
 
-That's it. From now on every uncaught error gets formatted automatically.
-
-For client-side errors, do the same in a `LocalScript`. `ScriptContext.Error` only fires on the side you connect from.
+For client-side error capture, repeat the call inside a `LocalScript`. `ScriptContext.Error` is scoped per-side and must be connected on each.
 
 ---
 
 ## API
 
 ### `Debu.Init()`
-Wires up the error handler and starts the lag spike watcher. Call once per side (server / client). Safe to call multiple times — it no-ops after the first.
+Connects the error handler and starts the performance watcher. Idempotent — subsequent calls are ignored.
 
-### `Debu.Log(msg)`
-Info-level log. Prints with timestamp + tag.
-```lua
-Debu.Log("Player joined")
--- 14:22:01 [INFO]: Player joined
-```
+### `Debu.Log(message: string)`
+Prints an info-level message via `print`. Output includes timestamp and active tag.
 
-### `Debu.Warn(msg)`
-Warning-level log. Same as above but yellow in the Output window.
-```lua
-Debu.Warn("Missing data detected")
-```
+### `Debu.Warn(message: string)`
+Prints a warning-level message via `warn`.
 
-### `Debu.Error(msg)`
-Error-level log. Doesn't halt the script — just displays loudly.
-```lua
-Debu.Error("Something broke")
-```
+### `Debu.Error(message: string)`
+Prints an error-level message via `warn`. Does not halt execution.
 
-### `Debu.Tag(name)`
-Sets a tag that gets prefixed onto every log until you change or clear it. Useful for narrowing down which system a message came from.
-```lua
-Debu.Tag("Combat")
-Debu.Log("Hit registered")
--- 14:22:01 [Combat] [INFO]: Hit registered
-
-Debu.Tag(nil) -- clears it
-```
+### `Debu.Tag(name: string?)`
+Sets the active tag prepended to all subsequent log output. Pass `nil` to clear.
 
 ---
 
-## Examples
+## Usage
 
-**Tagging a system:**
+**Initialization:**
 ```lua
 local Debu = require(game.ReplicatedStorage.Debu)
-
-Debu.Tag("InventorySystem")
-Debu.Log("Item added: Sword")
-Debu.Warn("Inventory near capacity")
-```
-
-**Catching errors automatically** (no extra work after `Init`):
-```lua
 Debu.Init()
-
--- somewhere else, in any script:
-local data = nil
-data.health = 100  -- crash. Debu catches and formats it.
 ```
 
-**Manually parsing an error string:**
+**Tagged logging:**
+```lua
+Debu.Tag("InventorySystem")
+Debu.Log("Item added")
+-- 14:22:01 [InventorySystem] [INFO]: Item added
+```
+
+**Direct error parsing:**
 ```lua
 local ErrorParser = require(game.ReplicatedStorage.Debu.ErrorParser)
 print(ErrorParser.Parse("Workspace.Part:14: attempt to index nil with 'Position'"))
@@ -103,12 +72,37 @@ print(ErrorParser.Parse("Workspace.Part:14: attempt to index nil with 'Position'
 
 ---
 
-## Gotchas
+## Output format
 
-- `ScriptContext.Error` only catches errors on the side it's connected. Run `Init()` from a server `Script` *and* a `LocalScript` if you want both covered.
-- `print(hello)` where `hello` is undefined **won't** trigger the handler — Lua treats it as `nil` and prints fine. Use `hello.foo` or `hello()` to actually crash.
-- Lag spike threshold defaults to 100ms. Adjust via `Performance.SetThreshold(seconds)` if your game runs heavier.
-- If your test script crashes *before* `Init` runs, the handler isn't connected yet. Add `task.wait(1)` to the test or make sure `Init` runs first.
+Raw Roblox error:
+```
+ServerScriptService.Script:3: attempt to perform arithmetic (mul) on nil and number
+```
+
+Debu output:
+```
+── Debu ── ServerScriptService.Script:3 → Tried to do math on a nil value
+```
+
+---
+
+## Configuration
+
+### Lag spike threshold
+Default: `0.1` seconds (100ms). Adjust via:
+```lua
+local Performance = require(game.ReplicatedStorage.Debu.Performance)
+Performance.SetThreshold(0.05) -- 50ms
+```
+
+---
+
+## Notes
+
+- `ScriptContext.Error` only fires for uncaught errors. Errors caught by `pcall` are not reported.
+- The handler is scoped per execution context. Server and client require separate `Init()` calls.
+- `print(undefinedVar)` does not raise an error in Lua and will not trigger the handler.
+- If a script errors before `Init()` connects, that error is not captured. Ensure `Init()` runs first or delay test scripts with `task.wait`.
 
 ---
 
@@ -117,29 +111,23 @@ print(ErrorParser.Parse("Workspace.Part:14: attempt to index nil with 'Position'
 ```
 Debu/
 ├─ init          -- public API
-├─ Logger        -- formatting + print routing
-├─ ErrorParser   -- raw error → readable error
-├─ StackTrace    -- cleaned-up traceback
-└─ Performance   -- frame delta watcher
+├─ Logger        -- output formatting and routing
+├─ ErrorParser   -- raw error string → structured output
+├─ StackTrace    -- traceback filtering
+└─ Performance   -- frame delta monitoring
 ```
-
-Each module is small enough to read in one sitting. Hack on it.
 
 ---
 
 ## Roadmap
 
-Stuff that's *not* in yet but is on the list:
-
-- Live overlay UI in Studio
-- Click error → jump to script
+- Studio overlay UI
+- Click-to-source navigation from errors
 - Performance graph
-- RemoteEvent traffic tracking
-
-MVP first. UI later.
+- RemoteEvent traffic logging
 
 ---
 
 ## License
 
-Free to use. Credit appreciated.
+Free to use. Attribution appreciated.
