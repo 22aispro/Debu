@@ -121,15 +121,6 @@ Debu/ -- public API
 
 ---
 
-## Roadmap
-
-- Studio overlay UI
-- Click-to-source navigation from errors
-- Performance graph
-- RemoteEvent traffic logging
-
----
-
 ## License
 
 Free to use. Attribution appreciated.
