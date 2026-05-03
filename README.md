@@ -109,7 +109,7 @@ Performance.SetThreshold(0.05) -- 50ms
 ## File structure
 
 ```
-Debu/
+Debu/ -- public API
 ├─ Logger        -- output formatting and routing
 ├─ ErrorParser   -- raw error string → structured output
 ├─ StackTrace    -- traceback filtering
