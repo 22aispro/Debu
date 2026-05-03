@@ -81,7 +81,10 @@ ServerScriptService.Script:3: attempt to perform arithmetic (mul) on nil and num
 
 Debu output:
 ```
-── Debu ── ServerScriptService.Script:3 → Tried to do math on a nil value
+── Debu caught an error ──
+	──  	Script:  ServerScriptService.Script
+	──  	Line:    3
+	──  	Reason:  attempt to perform arithmetic (mul) on nil and number
 ```
 
 ---
